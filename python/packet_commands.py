@@ -1,0 +1,13 @@
+# Transmitting PC -> FPGA
+
+CMD_ECHO = 0x01
+# CMD_RESET_DSP = 0x02
+# CMD_SET_GAIN = 0x03
+# CMD_SET_FIR = 0x04
+# CMD_PROCESS_AUDIO = 0x10
+# CMD_GET_STATUS = 0x11
+
+
+# Receiving FPGA -> PC
+
+CMD_DATA = 0xFF

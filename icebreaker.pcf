@@ -1,0 +1,5 @@
+set_io clk    35
+set_io uart_rxd 6
+set_io uart_txd 9
+
+set_io BTN1     20

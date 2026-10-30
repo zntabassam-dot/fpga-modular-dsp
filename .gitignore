@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# OS and editor metadata
+.DS_Store
+*:Zone.Identifier
+*.swp
+*~
+AGENTS.md
+
+# FPGA build outputs
+modular_dsp.json
+*.asc
+*.blif
+*.vcd
+*.gtkw
+*.log
+
+# Generated binaries (review before committing any firmware)
+*.bin
+
+# Generated audio output
+fpga_filtered.wav
