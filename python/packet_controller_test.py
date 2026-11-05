@@ -10,6 +10,7 @@ BAUD_RATE = 115200
 TIMEOUT = 3
 
 payload = bytes([0x00, 0x7F, 0x80, 0xFF, 0xA5, 0x5A])
+print(f"Sent Payload: \t\t{payload.hex(' ').upper()}")
 ser = serial.Serial(port=PORT, baudrate=BAUD_RATE, timeout=TIMEOUT)
 
 try:
@@ -21,9 +22,11 @@ try:
         raise AssertionError(f"Expected DATA command 0xFF, got 0x{response_cmd:02X}")
     if response_payload != payload:
         raise AssertionError(
-            f"Echo payload mismatch: sent {payload.hex()}, received {response_payload.hex()}"
+            "Echo payload mismatch: "
+            f"sent {payload.hex(' ').upper()}, "
+            f"received {response_payload.hex(' ').upper()}"
         )
 
-    print(f"Echo success: {response_payload.hex()}")
+    print(f"Echo success, received: {response_payload.hex(' ').upper()}")
 finally:
     ser.close()

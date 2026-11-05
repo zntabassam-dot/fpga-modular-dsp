@@ -5,6 +5,7 @@ module tb_echo_packet;
 
     reg clk = 1'b0;
     reg BTN1 = 1'b0;
+    reg monitor_resetn = 1'b0;
     reg uart_rxd = 1'b1;
     wire uart_txd;
     wire monitor_valid;
@@ -17,10 +18,12 @@ module tb_echo_packet;
     integer i;
     reg [7:0] checksum;
 
-    modular_dsp dut (.clk(clk), .BTN1(BTN1), .uart_rxd(uart_rxd), .uart_txd(uart_txd));
+    modular_dsp #(.POWERUP_RESET_CYCLES(8)) dut (
+        .clk(clk), .BTN1(BTN1), .uart_rxd(uart_rxd), .uart_txd(uart_txd)
+    );
 
     uart_rx #(.BIT_RATE(115200), .CLK_HZ(12000000), .PAYLOAD_BITS(8)) monitor_rx (
-        .clk(clk), .resetn(BTN1), .uart_rxd(uart_txd), .uart_rx_en(1'b1),
+        .clk(clk), .resetn(monitor_resetn), .uart_rxd(uart_txd), .uart_rx_en(1'b1),
         .uart_rx_break(monitor_break), .uart_rx_valid(monitor_valid),
         .uart_rx_data(monitor_data)
     );
@@ -127,9 +130,9 @@ module tb_echo_packet;
         payload[3] = 8'hFF;
         payload[4] = 8'h7F;
 
-        repeat (4) @(posedge clk);
+        repeat (12) @(posedge clk);
         @(negedge clk);
-        BTN1 = 1'b1;
+        monitor_resetn = 1'b1;
 
         send_echo_request(16'd5, 1'b0);
         wait_for_response_bytes(11);

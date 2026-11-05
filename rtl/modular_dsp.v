@@ -11,11 +11,19 @@ module modular_dsp(
 parameter CLK_HZ = 12000000;
 parameter BIT_RATE =   115200;
 parameter PAYLOAD_BITS = 8;
+parameter POWERUP_RESET_CYCLES = 32768;
 
-// The iCEBreaker user button is active-low; normalize it to an active-high
-// reset for the synchronous modules and active-low reset for the UART blocks.
-wire reset = ~BTN1;
-wire resetn = BTN1;
+// BTN1 is high while pressed: pressing asserts reset, releasing runs the design.
+reg [15:0] powerup_counter = 16'd0;
+wire powerup_reset = powerup_counter < POWERUP_RESET_CYCLES;
+
+always @(posedge clk) begin
+    if (powerup_reset)
+        powerup_counter <= powerup_counter + 1'b1;
+end
+
+wire reset = BTN1 || powerup_reset;
+wire resetn = ~reset;
 
 // ------------------------------------------------------------------------- 
 
