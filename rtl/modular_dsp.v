@@ -191,6 +191,6 @@ command_fir_filter_3tap command_fir_filter_3tap(
 .transmit_cmd           (transmit_cmd       ),
 .read_next_fifo_pulse   (read_next_fifo_pulse),
 .data_out               (transmission_payload)
-)
+);
 
 endmodule
