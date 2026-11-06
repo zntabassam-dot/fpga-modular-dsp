@@ -142,6 +142,8 @@ packet_transmitter packet_transmitter(
 // Command Handler
 //
 wire echo_start;
+wire is_first_packet_in_array;
+wire fir_filter_3tap_start;
 //
 command_handler command_handler(
 .clk                    (clk            ),
@@ -153,7 +155,9 @@ command_handler command_handler(
 
 .valid_receive_cmd      (valid_incoming_cmd),
 .pulse_transmit_cmd     (pulse_transmit_cmd),
-.echo_start             (echo_start     )
+.echo_start             (echo_start     ),
+.is_first_packet_in_array(is_first_packet_in_array),
+.fir_filter_3tap_start  (fir_filter_3tap_start)
 );
 
 //
@@ -173,5 +177,20 @@ command_echo command_echo(
 .data_out               (transmission_payload)
 );
 
+//
+// COMMAND - FIR Filter - 3 tap
+//
+command_fir_filter_3tap command_fir_filter_3tap(
+.clk                    (clk                ),
+.reset                  (reset              ),
+.is_first_packet_in_array(is_first_packet_in_array),
+.fir_filter_3tap_start  (fir_filter_3tap_start),
+.awaiting_payload       (awaiting_payload   ),
+.data_from_fifo         (data_out_fifo      ),
+
+.transmit_cmd           (transmit_cmd       ),
+.read_next_fifo_pulse   (read_next_fifo_pulse),
+.data_out               (transmission_payload)
+)
 
 endmodule
