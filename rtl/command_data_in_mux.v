@@ -7,12 +7,10 @@ module command_data_in_mux(
     input wire fir_filter_3tap_start,
 
     output reg awaiting_payload_echo,
-    output reg awaiting_payload_fir_3tap
+    output reg awaiting_payload_fir_3tap,
+    output reg active_echo,
+    output reg active_fir_3tap
 );
-
-
-reg active_echo = 1'b0;
-reg active_fir_3tap = 1'b0;
 
 // Remember which command owns the response until the packet is finished.
 always @(posedge clk) begin

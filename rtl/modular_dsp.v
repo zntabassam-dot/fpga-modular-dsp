@@ -122,6 +122,7 @@ packet_receiver #(.MAX_PAYLOAD(256)) packet_receiver(
 wire pulse_transmit_cmd;
 wire [7:0] transmit_cmd;
 wire awaiting_payload;
+wire [7:0] transmission_payload;
 wire packet_tx_done;
 //
 packet_transmitter packet_transmitter(
@@ -168,6 +169,8 @@ command_handler command_handler(
 //
 wire awaiting_payload_echo;
 wire awaiting_payload_fir_3tap;
+wire active_echo;
+wire active_fir_3tap;
 //
 command_data_in_mux command_data_in_mux(
 .clk                    (clk                ),
@@ -178,30 +181,56 @@ command_data_in_mux command_data_in_mux(
 .fir_filter_3tap_start  (fir_filter_3tap_start),
 
 .awaiting_payload_echo  (awaiting_payload_echo),
-.awaiting_payload_fir_3tap  (awaiting_payload_fir_3tap)
+.awaiting_payload_fir_3tap  (awaiting_payload_fir_3tap),
+.active_echo             (active_echo),
+.active_fir_3tap         (active_fir_3tap)
 );
 
+//
+// Command Data Out Mux
+// Mux - Prevent multiple inactive commands from actively driving the same output
+//
+command_data_out_mux command_data_out_mux(
+.active_echo                    (active_echo),
+.active_fir_3tap                (active_fir_3tap),
+.transmit_cmd_echo              (transmit_cmd_echo),
+.transmit_cmd_fir_3tap          (transmit_cmd_fir_3tap),
+.read_next_fifo_pulse_echo      (read_next_fifo_pulse_echo),
+.read_next_fifo_pulse_fir_3tap  (read_next_fifo_pulse_fir_3tap),
+.transmission_payload_echo      (transmission_payload_echo),
+.transmission_payload_fir_3tap  (transmission_payload_fir_3tap),
+
+.transmit_cmd                   (transmit_cmd),
+.read_next_fifo_pulse           (read_next_fifo_pulse),
+.transmission_payload           (transmission_payload)
+);
 
 //
 // COMMAND - Echo
 //
-wire [7:0] transmission_payload;
+wire [7:0] transmit_cmd_echo;
+wire read_next_fifo_pulse_echo;
+wire [7:0] transmission_payload_echo;
 //
 command_echo command_echo(
 .clk                    (clk                ),
 .reset                  (reset              ),
 .echo_start             (echo_start         ),
-.awaiting_payload       (awaiting_payload_echo   ),
+.awaiting_payload_echo  (awaiting_payload_echo),
 .data_from_fifo         (data_out_fifo      ),
 
-.transmit_cmd           (transmit_cmd       ),
-.read_next_fifo_pulse   (read_next_fifo_pulse),
-.data_out               (transmission_payload)
+.transmit_cmd           (transmit_cmd_echo       ),
+.read_next_fifo_pulse   (read_next_fifo_pulse_echo),
+.data_out               (transmission_payload_echo)
 );
 
 //
 // COMMAND - FIR Filter - 3 tap
 //
+wire [7:0] transmit_cmd_fir_3tap;
+wire read_next_fifo_pulse_fir_3tap;
+wire [7:0] transmission_payload_fir_3tap;
+
 command_fir_filter_3tap command_fir_filter_3tap(
 .clk                    (clk                ),
 .reset                  (reset              ),
@@ -210,9 +239,11 @@ command_fir_filter_3tap command_fir_filter_3tap(
 .awaiting_payload_fir_3tap(awaiting_payload_fir_3tap   ),
 .data_from_fifo         (data_out_fifo      ),
 
-.transmit_cmd           (transmit_cmd       ),
-.read_next_fifo_pulse   (read_next_fifo_pulse),
-.data_out               (transmission_payload)
+.transmit_cmd           (transmit_cmd_fir_3tap       ),
+.read_next_fifo_pulse   (read_next_fifo_pulse_fir_3tap),
+.data_out               (transmission_payload_fir_3tap)
 );
+
+
 
 endmodule
