@@ -122,6 +122,7 @@ packet_receiver #(.MAX_PAYLOAD(256)) packet_receiver(
 wire pulse_transmit_cmd;
 wire [7:0] transmit_cmd;
 wire awaiting_payload;
+wire packet_tx_done;
 //
 packet_transmitter packet_transmitter(
 .clk                    (clk                ),
@@ -134,7 +135,8 @@ packet_transmitter packet_transmitter(
 
 .awaiting_payload       (awaiting_payload   ),
 .uart_tx_en             (uart_tx_en         ),
-.uart_tx_data           (uart_tx_data       )
+.uart_tx_data           (uart_tx_data       ),
+.packet_tx_done         (packet_tx_done     )
 );
 
 
@@ -161,6 +163,26 @@ command_handler command_handler(
 );
 
 //
+// Command Data In Mux
+// Mux - Select currently active command to accept data (via awaiting_payload)
+//
+wire awaiting_payload_echo;
+wire awaiting_payload_fir_3tap;
+//
+command_data_in_mux command_data_in_mux(
+.clk                    (clk                ),
+.reset                  (reset              ),
+.awaiting_payload       (awaiting_payload   ),
+.packet_tx_done         (packet_tx_done     ),
+.echo_start             (echo_start         ),
+.fir_filter_3tap_start  (fir_filter_3tap_start),
+
+.awaiting_payload_echo  (awaiting_payload_echo),
+.awaiting_payload_fir_3tap  (awaiting_payload_fir_3tap)
+);
+
+
+//
 // COMMAND - Echo
 //
 wire [7:0] transmission_payload;
@@ -169,7 +191,7 @@ command_echo command_echo(
 .clk                    (clk                ),
 .reset                  (reset              ),
 .echo_start             (echo_start         ),
-.awaiting_payload       (awaiting_payload   ),
+.awaiting_payload       (awaiting_payload_echo   ),
 .data_from_fifo         (data_out_fifo      ),
 
 .transmit_cmd           (transmit_cmd       ),
@@ -185,7 +207,7 @@ command_fir_filter_3tap command_fir_filter_3tap(
 .reset                  (reset              ),
 .is_first_packet_in_array(is_first_packet_in_array),
 .fir_filter_3tap_start  (fir_filter_3tap_start),
-.awaiting_payload       (awaiting_payload   ),
+.awaiting_payload_fir_3tap(awaiting_payload_fir_3tap   ),
 .data_from_fifo         (data_out_fifo      ),
 
 .transmit_cmd           (transmit_cmd       ),

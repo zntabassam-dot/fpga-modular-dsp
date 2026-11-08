@@ -2,7 +2,7 @@ module command_echo(
     input wire clk,
     input wire reset,
     input wire echo_start,
-    input wire awaiting_payload,
+    input wire awaiting_payload_echo,
     input wire [7:0] data_from_fifo,
 
     output reg [7:0] transmit_cmd,
@@ -15,7 +15,7 @@ localparam CMD_DATA = 8'hFF;
 // The FIFO holds its registered head byte on data_from_fifo. The transmitter
 // samples that byte on the same edge that this enable advances the FIFO.
 assign data_out = data_from_fifo;
-assign read_next_fifo_pulse = awaiting_payload;
+assign read_next_fifo_pulse = awaiting_payload_echo;
 
 always @(posedge clk) begin
     if (reset)

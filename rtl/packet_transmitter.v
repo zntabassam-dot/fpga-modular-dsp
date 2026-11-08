@@ -9,7 +9,8 @@ module packet_transmitter(
 
     output reg awaiting_payload,
     output reg uart_tx_en,
-    output reg [7:0] uart_tx_data
+    output reg [7:0] uart_tx_data,
+    output reg packet_tx_done
 );
 
 localparam FSM_IDLE           = 3'd0;
@@ -83,7 +84,9 @@ always @(posedge clk) begin
         payload_count <= 16'd0;
         checksum_calc <= 8'd0;
         checksum_sent <= 1'b0;
+        packet_tx_done <= 1'b0;
     end else begin
+        packet_tx_done <= 1'b0;
         case (fsm_state)
             FSM_IDLE: begin
                 if (pulse_transmit_cmd && !tx_busy) begin
@@ -136,8 +139,10 @@ always @(posedge clk) begin
             FSM_CHECKSUM: begin
                 if (tx_accept)
                     checksum_sent <= 1'b1;
-                else if (checksum_sent && !tx_busy)
+                else if (checksum_sent && !tx_busy) begin
                     fsm_state <= FSM_IDLE;
+                    packet_tx_done <= 1'b1;
+                end
             end
             default: fsm_state <= FSM_IDLE;
         endcase
