@@ -13,5 +13,9 @@ module command_fir_filter_3tap(
 
 localparam CMD_DATA = 8'hFF;
 
+assign transmit_cmd = 8'b0;
+assign read_next_fifo_pulse = 1'b0;
+assign data_out = 8'b0;
+
 
 endmodule

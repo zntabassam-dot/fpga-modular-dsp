@@ -1,5 +1,5 @@
 SYNC = b'\xA5\x5A'  # First 2 bytes, FPGA is expecting this so it can sync to new packet
-MAX_PAYLOAD = 256
+MAX_PAYLOAD = 2048
 
 def build_packet(command, payload=b''): # payload = b'' means it takes in full bytes, i.e. chunks of 8 bits
     if len(payload) > MAX_PAYLOAD:

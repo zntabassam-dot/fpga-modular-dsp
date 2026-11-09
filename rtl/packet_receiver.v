@@ -1,5 +1,5 @@
 module packet_receiver #(
-    parameter MAX_PAYLOAD = 256
+    parameter MAX_PAYLOAD = 1024
 )(
     input wire clk,
     input wire reset,

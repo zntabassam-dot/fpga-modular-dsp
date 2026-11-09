@@ -81,7 +81,7 @@ wire end_of_packet;
 wire full_packet_valid;
 wire fifo_reset = reset || (end_of_packet && !full_packet_valid);
 //
-buffer fifo(
+buffer #(.DEPTH(2048)) fifo(
 .clk            (clk                ),
 .write_enable   (write_to_fifo_en  ),
 .data_in        (uart_rx_data       ),
@@ -102,7 +102,7 @@ wire [7:0] receive_cmd;
 wire [15:0] payload_length;
 
 //
-packet_receiver #(.MAX_PAYLOAD(256)) packet_receiver(
+packet_receiver #(.MAX_PAYLOAD(2048)) packet_receiver(
 .clk                    (clk            ),
 .reset                  (reset          ),
 .byte_received          (uart_rx_valid  ),

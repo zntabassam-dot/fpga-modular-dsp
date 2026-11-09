@@ -1,5 +1,5 @@
 module buffer #(
-    parameter DEPTH = 256
+    parameter DEPTH = 1024
 )(
     input wire clk,
     input wire write_enable,
