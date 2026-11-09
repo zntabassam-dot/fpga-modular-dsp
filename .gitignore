@@ -25,3 +25,4 @@ modular_dsp.json
 
 # Generated audio output
 fpga_filtered.wav
+fpga_fft_comparison.png

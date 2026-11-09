@@ -9,7 +9,7 @@ module modular_dsp(
 
 // Clock frequency in hertz.
 parameter CLK_HZ = 12000000;
-parameter BIT_RATE =   500000;
+parameter BIT_RATE = 1_500_000;
 parameter PAYLOAD_BITS = 8;
 parameter POWERUP_RESET_CYCLES = 32768;
 
@@ -146,7 +146,7 @@ packet_transmitter packet_transmitter(
 //
 wire echo_start;
 wire is_first_packet_in_array;
-wire fir_filter_3tap_start;
+wire fir_filter_start;
 //
 command_handler command_handler(
 .clk                    (clk            ),
@@ -160,7 +160,7 @@ command_handler command_handler(
 .pulse_transmit_cmd     (pulse_transmit_cmd),
 .echo_start             (echo_start     ),
 .is_first_packet_in_array(is_first_packet_in_array),
-.fir_filter_3tap_start  (fir_filter_3tap_start)
+.fir_filter_start       (fir_filter_start)
 );
 
 //
@@ -168,9 +168,9 @@ command_handler command_handler(
 // Mux - Select currently active command to accept data (via awaiting_payload)
 //
 wire awaiting_payload_echo;
-wire awaiting_payload_fir_3tap;
+wire awaiting_payload_fir_filter;
 wire active_echo;
-wire active_fir_3tap;
+wire active_fir_filter;
 //
 command_data_in_mux command_data_in_mux(
 .clk                    (clk                ),
@@ -178,12 +178,12 @@ command_data_in_mux command_data_in_mux(
 .awaiting_payload       (awaiting_payload   ),
 .packet_tx_done         (packet_tx_done     ),
 .echo_start             (echo_start         ),
-.fir_filter_3tap_start  (fir_filter_3tap_start),
+.fir_filter_start       (fir_filter_start),
 
 .awaiting_payload_echo  (awaiting_payload_echo),
-.awaiting_payload_fir_3tap  (awaiting_payload_fir_3tap),
+.awaiting_payload_fir_filter(awaiting_payload_fir_filter),
 .active_echo             (active_echo),
-.active_fir_3tap         (active_fir_3tap)
+.active_fir_filter       (active_fir_filter)
 );
 
 //
@@ -192,13 +192,13 @@ command_data_in_mux command_data_in_mux(
 //
 command_data_out_mux command_data_out_mux(
 .active_echo                    (active_echo),
-.active_fir_3tap                (active_fir_3tap),
+.active_fir_filter              (active_fir_filter),
 .transmit_cmd_echo              (transmit_cmd_echo),
-.transmit_cmd_fir_3tap          (transmit_cmd_fir_3tap),
+.transmit_cmd_fir_filter        (transmit_cmd_fir_filter),
 .read_next_fifo_pulse_echo      (read_next_fifo_pulse_echo),
-.read_next_fifo_pulse_fir_3tap  (read_next_fifo_pulse_fir_3tap),
+.read_next_fifo_pulse_fir_filter(read_next_fifo_pulse_fir_filter),
 .transmission_payload_echo      (transmission_payload_echo),
-.transmission_payload_fir_3tap  (transmission_payload_fir_3tap),
+.transmission_payload_fir_filter(transmission_payload_fir_filter),
 
 .transmit_cmd                   (transmit_cmd),
 .read_next_fifo_pulse           (read_next_fifo_pulse),
@@ -225,23 +225,24 @@ command_echo command_echo(
 );
 
 //
-// COMMAND - FIR Filter - 3 tap
+// COMMAND - 41-tap FIR low-pass filter
 //
-wire [7:0] transmit_cmd_fir_3tap;
-wire read_next_fifo_pulse_fir_3tap;
-wire [7:0] transmission_payload_fir_3tap;
+wire [7:0] transmit_cmd_fir_filter;
+wire read_next_fifo_pulse_fir_filter;
+wire [7:0] transmission_payload_fir_filter;
 
-command_fir_filter_3tap command_fir_filter_3tap(
+command_fir_filter command_fir_filter(
 .clk                    (clk                ),
 .reset                  (reset              ),
 .is_first_packet_in_array(is_first_packet_in_array),
-.fir_filter_3tap_start  (fir_filter_3tap_start),
-.awaiting_payload_fir_3tap(awaiting_payload_fir_3tap   ),
+.fir_filter_start       (fir_filter_start),
+.awaiting_payload_fir_filter(awaiting_payload_fir_filter),
+.payload_length         (payload_length     ),
 .data_from_fifo         (data_out_fifo      ),
 
-.transmit_cmd           (transmit_cmd_fir_3tap       ),
-.read_next_fifo_pulse   (read_next_fifo_pulse_fir_3tap),
-.data_out               (transmission_payload_fir_3tap)
+.transmit_cmd           (transmit_cmd_fir_filter),
+.read_next_fifo_pulse   (read_next_fifo_pulse_fir_filter),
+.data_out               (transmission_payload_fir_filter)
 );
 
 

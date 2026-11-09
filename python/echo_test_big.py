@@ -10,7 +10,7 @@ from packet_response import read_packet
 
 
 PORT = "/dev/ttyUSB1"
-BAUD_RATE = 500000
+BAUD_RATE = 1_500_000
 TIMEOUT = 3
 UART_BITS_PER_BYTE = 10  # 8 data bits, start bit and stop bit (8-N-1)
 PACKET_OVERHEAD_BYTES = 6  # sync, command, 2-byte length and checksum

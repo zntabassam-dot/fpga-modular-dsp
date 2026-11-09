@@ -10,7 +10,7 @@ module command_handler(
     output wire pulse_transmit_cmd,
     output reg echo_start,
     output reg is_first_packet_in_array,
-    output reg fir_filter_3tap_start
+    output reg fir_filter_start
 );
 
 localparam CMD_ECHO = 8'h01;
@@ -45,10 +45,12 @@ assign pulse_transmit_cmd = (transmit_cmd == CMD_DATA);
 always @(posedge clk) begin
     if (reset) begin
         echo_start <= 1'b0;
-        fir_filter_3tap_start <= 1'b0;
+        fir_filter_start <= 1'b0;
     end else begin
         echo_start <= end_of_packet && packet_valid && (receive_cmd == CMD_ECHO);
-        fir_filter_3tap_start <= end_of_packet && packet_valid && ((receive_cmd == CMD_FIR_FIRST_PACKET) || (receive_cmd == CMD_FIR_NON_FIRST_PACKET));
+        fir_filter_start <= end_of_packet && packet_valid &&
+                            ((receive_cmd == CMD_FIR_FIRST_PACKET) ||
+                             (receive_cmd == CMD_FIR_NON_FIRST_PACKET));
     end
 end
 

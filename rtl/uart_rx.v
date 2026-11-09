@@ -23,12 +23,10 @@ output reg  [PAYLOAD_BITS-1:0] uart_rx_data   // The recieved data.
 //
 // Input bit rate of the UART line.
 parameter   BIT_RATE        = 115200; // bits / sec
-localparam  BIT_P           = 1_000_000_000 * 1/BIT_RATE; // nanoseconds
 
 //
 // Clock frequency in hertz.
 parameter   CLK_HZ          =    12_000_000;
-localparam  CLK_P           = 1_000_000_000 * 1/CLK_HZ; // nanoseconds
 
 //
 // Number of data bits recieved per UART packet.
@@ -44,7 +42,9 @@ parameter   STOP_BITS       = 1;
 
 //
 // Number of clock cycles per uart bit.
-localparam       CYCLES_PER_BIT     = BIT_P / CLK_P;
+// Round CLK_HZ / BIT_RATE to the nearest whole clock. The counter below
+// counts from zero, so its terminal count is CYCLES_PER_BIT - 1.
+localparam       CYCLES_PER_BIT     = (CLK_HZ + BIT_RATE/2) / BIT_RATE;
 
 //
 // Size of the registers which store sample counts and bit durations.
@@ -108,7 +108,7 @@ end
 // FSM next state selection.
 // 
 
-wire next_bit     = cycle_counter == CYCLES_PER_BIT ||
+wire next_bit     = cycle_counter == CYCLES_PER_BIT-1 ||
                     (fsm_state == FSM_STOP && cycle_counter == CYCLES_PER_BIT/2);
 wire payload_done = bit_counter   == PAYLOAD_BITS  ;
 

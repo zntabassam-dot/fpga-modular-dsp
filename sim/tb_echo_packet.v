@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 module tb_echo_packet;
-    localparam BIT_CYCLES = 24;
+    localparam BIT_CYCLES = 8;
 
     reg clk = 1'b0;
     reg BTN1 = 1'b0;
@@ -12,8 +12,9 @@ module tb_echo_packet;
     wire monitor_break;
     wire [7:0] monitor_data;
 
-    reg [7:0] response_bytes [0:31];
+    reg [7:0] response_bytes [0:63];
     reg [7:0] payload [0:4];
+    reg [7:0] fir_expected [0:3];
     integer response_count = 0;
     integer i;
     reg [7:0] checksum;
@@ -22,7 +23,7 @@ module tb_echo_packet;
         .clk(clk), .BTN1(BTN1), .uart_rxd(uart_rxd), .uart_txd(uart_txd)
     );
 
-    uart_rx #(.BIT_RATE(500000), .CLK_HZ(12000000), .PAYLOAD_BITS(8)) monitor_rx (
+    uart_rx #(.BIT_RATE(1500000), .CLK_HZ(12000000), .PAYLOAD_BITS(8)) monitor_rx (
         .clk(clk), .resetn(monitor_resetn), .uart_rxd(uart_txd), .uart_rx_en(1'b1),
         .uart_rx_break(monitor_break), .uart_rx_valid(monitor_valid),
         .uart_rx_data(monitor_data)
@@ -102,6 +103,29 @@ module tb_echo_packet;
         end
     endtask
 
+    task check_fir_response(input integer start_index, input [15:0] length);
+        integer j;
+        reg [7:0] expected_checksum;
+        begin
+            if (response_bytes[start_index] !== 8'hA5 ||
+                response_bytes[start_index + 1] !== 8'h5A ||
+                response_bytes[start_index + 2] !== 8'hFF ||
+                response_bytes[start_index + 3] !== length[7:0] ||
+                response_bytes[start_index + 4] !== length[15:8])
+                $fatal(1, "FIR response header mismatch at byte %0d", start_index);
+
+            expected_checksum = 8'hFF ^ length[7:0] ^ length[15:8];
+            for (j = 0; j < length; j = j + 1) begin
+                if (response_bytes[start_index + 5 + j] !== fir_expected[j])
+                    $fatal(1, "FIR output byte %0d mismatch: expected %02x, got %02x",
+                           j, fir_expected[j], response_bytes[start_index + 5 + j]);
+                expected_checksum = expected_checksum ^ fir_expected[j];
+            end
+            if (response_bytes[start_index + 5 + length] !== expected_checksum)
+                $fatal(1, "FIR response checksum mismatch");
+        end
+    endtask
+
     task send_echo_request(input [15:0] length, input reg corrupt_checksum);
         integer j;
         reg [7:0] request_checksum;
@@ -115,6 +139,27 @@ module tb_echo_packet;
             send_uart_byte(8'hA5);
             send_uart_byte(8'h5A);
             send_uart_byte(8'h01);
+            send_uart_byte(length[7:0]);
+            send_uart_byte(length[15:8]);
+            for (j = 0; j < length; j = j + 1)
+                send_uart_byte(payload[j]);
+            send_uart_byte(request_checksum);
+        end
+    endtask
+
+    task send_fir_request(input [15:0] length, input reg first_packet);
+        integer j;
+        reg [7:0] command;
+        reg [7:0] request_checksum;
+        begin
+            command = first_packet ? 8'h02 : 8'h03;
+            request_checksum = command ^ length[7:0] ^ length[15:8];
+            for (j = 0; j < length; j = j + 1)
+                request_checksum = request_checksum ^ payload[j];
+
+            send_uart_byte(8'hA5);
+            send_uart_byte(8'h5A);
+            send_uart_byte(command);
             send_uart_byte(length[7:0]);
             send_uart_byte(length[15:8]);
             for (j = 0; j < length; j = j + 1)
@@ -155,7 +200,29 @@ module tb_echo_packet;
         wait_for_response_bytes(24);
         check_response(18, 16'd0);
 
-        $display("PASS tb_echo_packet");
+        // Exercise the integrated FIR command path on two signed 16-bit
+        // samples, then continue the same stream in a second packet.
+        payload[0] = 8'h00;
+        payload[1] = 8'h10; // +4096
+        payload[2] = 8'h00;
+        payload[3] = 8'h20; // +8192
+        fir_expected[0] = 8'hED;
+        fir_expected[1] = 8'hFF; // y[0] = -19
+        fir_expected[2] = 8'hC1;
+        fir_expected[3] = 8'hFF; // y[1] = -63
+        send_fir_request(16'd4, 1'b1);
+        wait_for_response_bytes(34);
+        check_fir_response(24, 16'd4);
+
+        payload[0] = 8'h00;
+        payload[1] = 8'hF0; // -4096
+        fir_expected[0] = 8'hC1;
+        fir_expected[1] = 8'hFF; // y[2] = -63, using prior packet history
+        send_fir_request(16'd2, 1'b0);
+        wait_for_response_bytes(42);
+        check_fir_response(34, 16'd2);
+
+        $display("PASS tb_echo_packet (echo and FIR)");
         $finish;
     end
 endmodule

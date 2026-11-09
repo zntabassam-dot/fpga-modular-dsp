@@ -8,7 +8,8 @@ An in-progress project exploring hardware acceleration for digital audio process
 - FPGA detects packet signature, recognizes command, and buffers incoming payload (Complete)
 - FPGA executes requested commands, and sends processed data back to PC (Complete)
 - FPGA features an echo command, which verifies communication by returning the payload (Complete)
-- Implement commands to filter/process uncompressed audio bytes as desired (Incomplete)
+- FPGA applies a 41-tap low-pass FIR to mono, signed 16-bit PCM audio (implemented; hardware validation pending)
+- Additional filter designs and configurable coefficients (Incomplete)
 
 ## Secondary aims
 
@@ -19,7 +20,7 @@ An in-progress project exploring hardware acceleration for digital audio process
 
 - **Board:** iCEBreaker with an iCE40UP5K FPGA (SG48 package)
 - **FPGA system clock:** 12 MHz
-- **UART:** 500,000 baud, 8 data bits, no parity, 1 stop bit (8-N-1)
+- **UART:** 1,500,000 baud, 8 data bits, no parity, 1 stop bit (8-N-1)
 - **RTL:** Verilog
 - **FPGA toolchain:** OSS CAD Suite (Yosys, nextpnr, icepack)
 
