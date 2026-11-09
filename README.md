@@ -19,7 +19,7 @@ An in-progress project exploring hardware acceleration for digital audio process
 
 - **Board:** iCEBreaker with an iCE40UP5K FPGA (SG48 package)
 - **FPGA system clock:** 12 MHz
-- **UART:** 115200 baud, 8 data bits, no parity, 1 stop bit (8-N-1)
+- **UART:** 500,000 baud, 8 data bits, no parity, 1 stop bit (8-N-1)
 - **RTL:** Verilog
 - **FPGA toolchain:** OSS CAD Suite (Yosys, nextpnr, icepack)
 

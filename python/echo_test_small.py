@@ -6,7 +6,7 @@ from packet_response import read_packet
 
 
 PORT = "/dev/ttyUSB1"
-BAUD_RATE = 115200
+BAUD_RATE = 500000
 TIMEOUT = 3
 
 payload = bytes([0x00, 0x7F, 0x80, 0xFF, 0xA5, 0x5A])

@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 module tb_echo_packet;
-    localparam BIT_CYCLES = 104;
+    localparam BIT_CYCLES = 24;
 
     reg clk = 1'b0;
     reg BTN1 = 1'b0;
@@ -22,7 +22,7 @@ module tb_echo_packet;
         .clk(clk), .BTN1(BTN1), .uart_rxd(uart_rxd), .uart_txd(uart_txd)
     );
 
-    uart_rx #(.BIT_RATE(115200), .CLK_HZ(12000000), .PAYLOAD_BITS(8)) monitor_rx (
+    uart_rx #(.BIT_RATE(500000), .CLK_HZ(12000000), .PAYLOAD_BITS(8)) monitor_rx (
         .clk(clk), .resetn(monitor_resetn), .uart_rxd(uart_txd), .uart_rx_en(1'b1),
         .uart_rx_break(monitor_break), .uart_rx_valid(monitor_valid),
         .uart_rx_data(monitor_data)

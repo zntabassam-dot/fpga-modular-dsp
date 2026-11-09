@@ -9,7 +9,7 @@ module modular_dsp(
 
 // Clock frequency in hertz.
 parameter CLK_HZ = 12000000;
-parameter BIT_RATE =   115200;
+parameter BIT_RATE =   500000;
 parameter PAYLOAD_BITS = 8;
 parameter POWERUP_RESET_CYCLES = 32768;
 
