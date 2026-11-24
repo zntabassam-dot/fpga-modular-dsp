@@ -27,3 +27,5 @@ modular_dsp.json
 fpga_filtered.wav
 fpga_fft_comparison.png
 python/recorded_audio.wav
+python/fpga_stream_filtered.wav
+python/fpga_stream_original.wav

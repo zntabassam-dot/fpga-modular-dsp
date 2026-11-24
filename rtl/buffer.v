@@ -1,29 +1,33 @@
 module buffer #(
-    parameter DEPTH = 1024
+    parameter DEPTH = 1024,
+    parameter DATA_WIDTH = 8
 )(
     input wire clk,
     input wire write_enable,
-    input wire [7:0] data_in,
+    input wire [DATA_WIDTH-1:0] data_in,
     input wire read_enable,
     input wire reset,
 
-    output wire [7:0] data_out,
+    output wire [DATA_WIDTH-1:0] data_out,
     output wire empty,
-    output wire full
+    output wire full,
+    output wire [$clog2(DEPTH+1)-1:0] count
 );
 
 localparam PTR_WIDTH = $clog2(DEPTH);
+localparam COUNT_WIDTH = $clog2(DEPTH+1);
 
-reg [7:0] buffer_mem [0:DEPTH-1];
+reg [DATA_WIDTH-1:0] buffer_mem [0:DEPTH-1];
 reg [PTR_WIDTH-1:0] write_ptr = 0;
 reg [PTR_WIDTH-1:0] read_ptr = 0;
-reg [PTR_WIDTH:0] count = 0;
-reg [7:0] ram_head;
-reg [7:0] bypass_head = 0;
+reg [COUNT_WIDTH-1:0] count_reg = 0;
+reg [DATA_WIDTH-1:0] ram_head;
+reg [DATA_WIDTH-1:0] bypass_head = 0;
 reg use_bypass = 1'b1;
 
-assign empty = (count == 0);
-assign full = (count == DEPTH);
+assign count = count_reg;
+assign empty = (count_reg == 0);
+assign full = (count_reg == DEPTH);
 
 wire do_read = !reset && read_enable && !empty;
 // Permit a write on the same cycle as a read, even when currently full.
@@ -38,7 +42,7 @@ assign data_out = use_bypass ? bypass_head : ram_head;
 always @(posedge clk) begin
     if (do_write)
         buffer_mem[write_ptr] <= data_in;
-    if (do_read && (count > 1))
+    if (do_read && (count_reg > 1))
         ram_head <= buffer_mem[next_read_ptr];
 end
 
@@ -46,7 +50,7 @@ always @(posedge clk) begin
     if (reset) begin
         write_ptr <= 0;
         read_ptr <= 0;
-        count <= 0;
+        count_reg <= 0;
         bypass_head <= 0;
         use_bypass <= 1'b1;
     end else begin
@@ -65,19 +69,19 @@ always @(posedge clk) begin
         end
 
         if (do_write && !do_read)
-            count <= count + 1'b1;
+            count_reg <= count_reg + 1'b1;
         else if (do_read && !do_write)
-            count <= count - 1'b1;
+            count_reg <= count_reg - 1'b1;
 
         if (do_read) begin
-            if (count > 1) begin
+            if (count_reg > 1) begin
                 use_bypass <= 1'b0;
             end else if (do_write) begin
                 // Replacing the only queued byte: the new byte becomes head.
                 bypass_head <= data_in;
                 use_bypass <= 1'b1;
             end else begin
-                bypass_head <= 8'd0;
+                bypass_head <= {DATA_WIDTH{1'b0}};
                 use_bypass <= 1'b1;
             end
         end else if (empty && do_write) begin

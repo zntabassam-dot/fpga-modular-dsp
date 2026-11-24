@@ -24,43 +24,62 @@ def _kaiser_beta(attenuation_db):
     return 0.0
 
 
-def design_firwin_taps():
-    """Return quantized Q1.15 taps for firwin(cutoff=2k, width=2k, fs=48k).
+def design_firwin_taps(
+    num_taps=FIR_TAPS,
+    cutoff_hz=CUTOFF_HZ,
+    stopband_start_hz=STOPBAND_START_HZ,
+    sample_rate_hz=SAMPLE_RATE_HZ,
+    attenuation_db=None,
+):
+    """Return quantized Q1.15 taps for a windowed-sinc low-pass FIR.
 
     This is the windowed-sinc calculation used by scipy.signal.firwin with a
     Kaiser width. It is written with NumPy so the audio test does not require
-    SciPy just to load the coefficients.
+    SciPy just to load the coefficients. The number of taps and frequency
+    design values can be supplied by a streaming application.
     """
-    transition_width = TRANSITION_WIDTH_HZ / (SAMPLE_RATE_HZ / 2)
-    attenuation = (
-        2.285 * (FIR_TAPS - 1) * np.pi * transition_width + 7.95
-    )
-    beta = _kaiser_beta(attenuation)
+    if num_taps < 2:
+        raise ValueError("num_taps must be at least 2")
+    if not 0 < cutoff_hz < stopband_start_hz < sample_rate_hz / 2:
+        raise ValueError("Require 0 < cutoff < stopband start < Nyquist")
 
-    sample_offsets = np.arange(FIR_TAPS) - (FIR_TAPS - 1) / 2
-    normalized_cutoff = 2 * CUTOFF_HZ / SAMPLE_RATE_HZ
+    transition_width_hz = stopband_start_hz - cutoff_hz
+    transition_width = transition_width_hz / (sample_rate_hz / 2)
+    kaiser_attenuation = (
+        2.285 * (num_taps - 1) * np.pi * transition_width + 7.95
+    )
+    requested_attenuation = (
+        kaiser_attenuation if attenuation_db is None else
+        min(attenuation_db, kaiser_attenuation)
+    )
+    beta = _kaiser_beta(requested_attenuation)
+
+    sample_offsets = np.arange(num_taps) - (num_taps - 1) / 2
+    normalized_cutoff = 2 * cutoff_hz / sample_rate_hz
     ideal_lowpass = normalized_cutoff * np.sinc(
         normalized_cutoff * sample_offsets
     )
-    floating_taps = ideal_lowpass * np.kaiser(FIR_TAPS, beta)
+    floating_taps = ideal_lowpass * np.kaiser(num_taps, beta)
     floating_taps /= floating_taps.sum()  # Unity gain at DC.
 
     quantized = np.rint(floating_taps * COEFFICIENT_SCALE).astype(np.int64)
     # Correct rounding at the centre tap so the fixed-point DC gain is exactly 1.
-    centre = FIR_TAPS // 2
+    centre = num_taps // 2
     quantized[centre] += COEFFICIENT_SCALE - int(quantized.sum())
+    if np.any(quantized < -32768) or np.any(quantized > 32767):
+        raise ValueError("Designed Q1.15 coefficients exceed signed 16-bit range")
     return tuple(int(value) for value in quantized)
 
 
 FIR_COEFFICIENTS_Q15 = design_firwin_taps()
 
 
-def response_db():
+def response_db(coefficients=FIR_COEFFICIENTS_Q15, sample_rate_hz=SAMPLE_RATE_HZ):
     """Return frequencies and the quantized filter magnitude in dB."""
     fft_size = 65_536
-    taps = np.asarray(FIR_COEFFICIENTS_Q15, dtype=np.float64) / COEFFICIENT_SCALE
+    taps = np.asarray(coefficients, dtype=np.float64) / COEFFICIENT_SCALE
     response = np.abs(np.fft.rfft(taps, n=fft_size))
-    frequencies = np.fft.rfftfreq(fft_size, d=1 / SAMPLE_RATE_HZ)
+    frequencies = np.fft.rfftfreq(fft_size, d=1 / sample_rate_hz)
     magnitude_db = 20 * np.log10(np.maximum(response, 1e-12))
     return frequencies, magnitude_db
 

@@ -5,51 +5,18 @@ from pathlib import Path
 import threading
 import wave
 
+from audio_capture import (
+    CHANNELS,
+    SAMPLE_RATE_HZ,
+    list_input_devices,
+    load_sounddevice,
+    make_input_stream,
+)
 
 # Match the format expected by the current FPGA FIR demonstration.
-SAMPLE_RATE_HZ = 48_000
-CHANNELS = 1
 SAMPLE_WIDTH_BYTES = 2
 MAX_RECORD_SECONDS = 20
 DEFAULT_OUTPUT = Path(__file__).with_name("recorded_audio.wav")
-
-
-def _load_sounddevice():
-    """Import sounddevice only when capture is requested."""
-    try:
-        import sounddevice as sd
-    except ImportError as exc:
-        raise SystemExit(
-            "Missing dependency: install it with `python3 -m pip install sounddevice`"
-        ) from exc
-    except OSError as exc:
-        raise SystemExit(
-            "sounddevice is installed, but the PortAudio system library is missing.\n"
-            "On Ubuntu/WSL, install it with `sudo apt install libportaudio2`, "
-            "then try --list-devices again."
-        ) from exc
-    return sd
-
-
-def list_input_devices(sd):
-    """Print input-capable audio devices so a headset mic can be selected."""
-    devices = sd.query_devices()
-    default_input = sd.default.device[0]
-    print("Input devices:")
-    for index, device in enumerate(devices):
-        if device["max_input_channels"] > 0:
-            marker = " (default)" if index == default_input else ""
-            print(f"  {index}: {device['name']}{marker}")
-
-
-def _device_argument(value):
-    """Interpret a numeric device argument as an index, otherwise as a name."""
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except ValueError:
-        return value
 
 
 def record_audio(output_path=DEFAULT_OUTPUT, max_seconds=MAX_RECORD_SECONDS,
@@ -60,7 +27,6 @@ def record_audio(output_path=DEFAULT_OUTPUT, max_seconds=MAX_RECORD_SECONDS,
     capture bounded in memory and leaves the callback ready to feed a streaming
     queue in a later version.
     """
-    sd = _load_sounddevice()
     stop_requested = threading.Event()
     audio_blocks = []
     status_messages = set()
@@ -78,15 +44,8 @@ def record_audio(output_path=DEFAULT_OUTPUT, max_seconds=MAX_RECORD_SECONDS,
                 # should enqueue blocks and let a separate thread send packets.
                 on_audio_block(audio_block)
 
-    input_device = _device_argument(device)
     try:
-        stream = sd.InputStream(
-            samplerate=SAMPLE_RATE_HZ,
-            channels=CHANNELS,
-            dtype="int16",
-            device=input_device,
-            callback=audio_callback,
-        )
+        stream = make_input_stream(audio_callback, device=device)
     except Exception as exc:
         raise SystemExit(
             f"Could not open the audio input: {exc}\n"
@@ -178,9 +137,9 @@ def main():
     )
     args = parser.parse_args()
 
-    sd = _load_sounddevice()
+    load_sounddevice()
     if args.list_devices:
-        list_input_devices(sd)
+        list_input_devices()
         return
     if args.unlimited and not args.no_save:
         parser.error("--unlimited currently requires --no-save")

@@ -1,6 +1,6 @@
 PROJ = modular_dsp
 PCF  = icebreaker.pcf
-SOURCES = rtl/modular_dsp.v rtl/uart_tx.v rtl/uart_rx.v rtl/buffer.v rtl/packet_receiver.v rtl/packet_transmitter.v rtl/command_handler.v rtl/command_echo.v rtl/command_fir_filter.v rtl/command_data_in_mux.v rtl/command_data_out_mux.v
+SOURCES = rtl/modular_dsp.v rtl/uart_tx.v rtl/uart_rx.v rtl/buffer.v rtl/packet_receiver.v rtl/packet_transmitter.v rtl/command_handler.v rtl/command_echo.v rtl/command_fir_filter.v rtl/command_data_in_mux.v rtl/command_data_out_mux.v rtl/stream_packet_receiver.v rtl/fir_filter_core.v rtl/audio_stream_controller.v
 
 all: $(PROJ).bin
 

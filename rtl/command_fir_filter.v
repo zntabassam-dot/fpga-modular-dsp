@@ -36,10 +36,13 @@ reg signed [37:0] accumulator;
 // A power-of-two circular buffer stores the preceding 40 signed samples.
 // It is read synchronously, one tap per MAC iteration, to keep the delay
 // storage compact instead of building 640 flip-flops.
-reg signed [15:0] sample_history [0:HISTORY_DEPTH-1];
+// Explicitly select block RAM rather than allowing small-memory heuristics to
+// implement the 64x16 history as flip-flops.
+(* ram_style = "block" *) reg signed [15:0] sample_history [0:HISTORY_DEPTH-1];
 reg [HISTORY_COUNT_WIDTH-1:0] history_write_ptr;
 reg [HISTORY_COUNT_WIDTH-1:0] history_count;
 reg signed [15:0] history_read_data;
+reg history_read_valid;
 wire [HISTORY_COUNT_WIDTH-1:0] history_read_address =
     history_write_ptr - tap_index;
 
@@ -101,8 +104,8 @@ function signed [15:0] coefficient_for_tap;
     end
 endfunction
 
-wire signed [15:0] mac_sample = (tap_index == 0) ?
-                                input_sample : history_read_data;
+wire signed [15:0] mac_sample = (tap_index == 0) ? input_sample :
+                                (history_read_valid ? history_read_data : 16'sd0);
 wire signed [15:0] coefficient = coefficient_for_tap(tap_index);
 wire signed [31:0] mac_product = mac_sample * coefficient;
 wire signed [37:0] product_extended = {{6{mac_product[31]}}, mac_product};
@@ -121,23 +124,22 @@ assign data_out = current_sample_valid ?
                                       current_filtered_sample[7:0]) :
                   8'd0;
 
-// The history RAM has a synchronous read port and is written only after a
-// sample's complete multiply-accumulate operation has finished.
+// Keep the RAM read and write ports simple and synchronous for iCE40 EBR
+// inference. Startup zero padding is selected separately from the RAM data.
 always @(posedge clk) begin
-    if (reset) begin
-        history_read_data <= 16'sd0;
-    end else begin
-        if (state == STATE_HISTORY) begin
-            if (tap_index <= history_count)
-                history_read_data <= sample_history[history_read_address];
-            else
-                history_read_data <= 16'sd0;
-        end
+    if (state == STATE_HISTORY && !reset)
+        history_read_data <= sample_history[history_read_address];
 
-        if (!fir_filter_start && state == STATE_MAC &&
-            tap_index == FIR_TAPS-1)
-            sample_history[history_write_ptr] <= input_sample;
-    end
+    if (!reset && !fir_filter_start && state == STATE_MAC &&
+        tap_index == FIR_TAPS-1)
+        sample_history[history_write_ptr] <= input_sample;
+end
+
+always @(posedge clk) begin
+    if (reset)
+        history_read_valid <= 1'b0;
+    else if (state == STATE_HISTORY)
+        history_read_valid <= tap_index <= history_count;
 end
 
 always @(posedge clk) begin
